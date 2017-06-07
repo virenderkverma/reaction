@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 ## Required environment variables in your CircleCI dashboard
 # (used to push to Docker Hub)
 #
@@ -23,8 +25,6 @@ fi
 
 ## Development
 if [[ "$CIRCLE_BRANCH" == "development" ]]; then
-  set -e
-
   DOCKER_NAMESPACE=${DOCKER_NAMESPACE:-"reactioncommerce/reaction"}
   DOCKER_NAMESPACE_DEV=${DOCKER_NAMESPACE_DEV:-"reactioncommerce/prequel"}
 
@@ -43,8 +43,6 @@ if [[ "$CIRCLE_BRANCH" == "master" ]]; then
   VERSION=$(git describe --tags | grep "^v[0-9]\+\.[0-9]\+\.[0-9]\+$")
 
   if [[ "$VERSION" ]]; then
-    set -e
-
     DOCKER_NAMESPACE=${DOCKER_NAMESPACE:-"reactioncommerce/reaction"}
 
     docker tag $DOCKER_NAMESPACE:latest $DOCKER_NAMESPACE:$VERSION
