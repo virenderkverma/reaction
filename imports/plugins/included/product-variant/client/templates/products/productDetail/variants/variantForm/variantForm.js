@@ -1,3 +1,4 @@
+import Sortable from "sortablejs";
 import { Meteor } from "meteor/meteor";
 import { ReactiveDict } from "meteor/reactive-dict";
 import { Session } from "meteor/session";
@@ -23,6 +24,14 @@ Template.variantForm.onCreated(function () {
     const product = Products.findOne(variant._id);
     return applyProductRevision(product);
   };
+});
+
+Template.variantForm.onRendered(function () {
+  const instance = Template.instance();
+  const list = instance.$(".panel-group-accordian")[0];
+  instance._sortable = Sortable.create(list, {
+    group: "variant options",
+    handle: ".js-child-variant-heading"
 });
 
 /**
