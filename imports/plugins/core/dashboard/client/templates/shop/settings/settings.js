@@ -127,17 +127,32 @@ Template.shopSettings.helpers({
       _id: Reaction.getShopId()
     });
   },
+
   packageData: function () {
     return Packages.findOne({
       name: "core",
       shopId: Reaction.getShopId()
     });
   },
+
   addressBook: function () {
     const address = Shops.findOne({
       _id: Reaction.getShopId()
     }).addressBook;
     return address[0];
+  },
+
+  isMerchantOrAffiliateShop() {
+    const shop = Shops.findOne({
+      _id: Reaction.getShopId()
+    });
+    // TODO: Should check to see if shop owns setting up payments
+    return shop.shopType !== "primary";
+  },
+
+  shopPaymentConfigured() {
+  // TODO: Create shop flag or figure out payment methods for shop.
+    return false;
   }
 });
 

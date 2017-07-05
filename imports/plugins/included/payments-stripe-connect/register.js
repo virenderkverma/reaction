@@ -36,6 +36,9 @@ Reaction.registerPackage({
 
     // Redirect for Stripe Connect Sign-In
     {
+      label: "Stripe Connect Redirect Route",
+      name: "stripeConnectRedirect",
+      provides: "apiRedirectRoute",
       template: "stripeConnectRedirect",
       route: "/stripe-connect-redirect"
     }

@@ -1,17 +1,7 @@
-import { Meteor } from "meteor/meteor";
-import { Reaction } from "/lib/api";
+import { Reaction } from "/client/api";
+import { Shops } from "/lib/collections";
 
-// TODO: This button should be a React component.
-
-Template.stripeConnectSignupButton.onCreated(function () {
-  this.autorun(() => {
-    // TODO: this should probably be managed by a subscription?
-    // Seems inefficient to do it at the button component level
-    Meteor.subscribe("SellerShops");
-  });
-});
-
-// Button
+// TODO: This button should use our React component
 Template.stripeConnectSignupButton.helpers({
   /**
    * Give it a size and style
@@ -29,19 +19,41 @@ Template.stripeConnectSignupButton.helpers({
 
 Template.stripeConnectSignupButton.events({
   "click [data-event-action='button-click-stripe-signup']": function () {
-    const sellerShop = Reaction.getSellerShop();
+    const shopId = Reaction.getShopId();
+    const shop = Shops.findOne({ _id: shopId });
+    // const marketplaceId = Reaction.getMarketplaceId();
+    // const stripeClientId = Reaction.getPackageSettings({
+    //   name: stripe,
+    //   shopId: marketplaceId
+    // });
 
-    const email = sellerShop.emails[0].address;
-    const country = sellerShop.addressBook[0].country;
-    const phoneNumber = sellerShop.addressBook[0].phone;
-    const businessName = sellerShop.addressBook[0].company;
-    const streetAddress = sellerShop.addressBook[0].address1;
-    const city = sellerShop.addressBook[0].city;
-    const state = sellerShop.addressBook[0].state;
-    const zip = sellerShop.addressBook[0].postal;
+    // TEST ONLY - hard code stripe client id
+    const stripeClientId = "ca_AY0QPPR9xdwlF7OHa3mxIZkMiVCMBKgE";
+
+    // If we don't have a shop, or if the active shop doesn't have an address
+    // or an email, prompt
+    if (!shop) {
+      return console.log("Shop not found!");
+    }
+
+    if (Array.isArray(shop.addressBook) || shop.addressBook.length === 0) {
+      return console.log("Please add an address first!");
+    }
+
+    if (!Array.isArray(shop.emails) || shop.emails.length === 0) {
+      return console.log("Please add an email first!");
+    }
+
+    const email = shop.emails[0].address;
+    const country = shop.addressBook[0].country;
+    const phoneNumber = shop.addressBook[0].phone;
+    const businessName = shop.addressBook[0].company;
+    const streetAddress = shop.addressBook[0].address1;
+    const city = shop.addressBook[0].city;
+    const state = shop.addressBook[0].state;
+    const zip = shop.addressBook[0].postal;
 
     const autofillParams = `&stripe_user[email]=${email}&stripe_user[country]=${country}&stripe_user[phone_number]=${phoneNumber}&stripe_user[business_name]=${businessName}&stripe_user[street_address]=${streetAddress}&stripe_user[city]=${city}&stripe_user[state]=${state}&stripe_user[zip]=${zip}`; // eslint-disable-line max-len
-    // TODO: Should client_id be hardcoded in here?
-    window.location.href = "https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_32D88BD1qLklliziD7gYQvctJIhWBSQ7&scope=read_write" + autofillParams;
+    window.location.href = `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=${stripeClientId}&scope=read_write` + autofillParams;
   }
 });
