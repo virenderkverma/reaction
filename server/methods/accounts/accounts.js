@@ -453,32 +453,118 @@ export function addressBookRemove(addressId, accountUserId) {
 }
 
 /**
+ * inviteAsOwner
+ * invite new user as owner of a new shop
+ * If newShop is true, it takes precedence over the shopId passed
+ * @param {Object} options -
+ * @param {String} options.email - email of invitee
+ * @param {String} options.name - name of invitee
+ * @returns {Boolean} returns true
+ */
+function inviteAsOwner(options) {
+  check(options.email, String);
+  check(options.name, String);
+  const { name, email } = options;
+
+  const userId = MeteorAccounts.createUser({
+    email: email,
+    name: name,
+    profile: { invited: true }
+  });
+
+  // const newUser = Meteor.users.findOne(userId);
+  const { shopId } = Meteor.call("shop/createShop", userId);
+  const shop = Shops.findOne(shopId);
+
+  // Compile Email with SSR
+  const tpl = "accounts/inviteShopMember";
+  const subject = "accounts/inviteShopMember/subject";
+  SSR.compileTemplate(tpl, Reaction.Email.getTemplate(tpl));
+  SSR.compileTemplate(subject, Reaction.Email.getSubject(tpl));
+
+  // Get shop logo, if available. If not, use default logo from file-system
+  let emailLogo;
+  if (Array.isArray(shop.brandAssets)) {
+    const brandAsset = _.find(shop.brandAssets, (asset) => asset.type === "navbarBrandImage");
+    const mediaId = Media.findOne(brandAsset.mediaId);
+    emailLogo = path.join(Meteor.absoluteUrl(), mediaId.url());
+  } else {
+    emailLogo = Meteor.absoluteUrl() + "resources/email-templates/shop-logo.png";
+  }
+
+  const token = Random.id();
+
+  const dataForEmail = {
+    shop: shop, // Shop Data
+    contactEmail: shop.emails[0].address,
+    homepage: Meteor.absoluteUrl(),
+    emailLogo: emailLogo,
+    copyrightDate: moment().format("YYYY"),
+    legalName: shop.addressBook[0].company,
+    physicalAddress: {
+      address: shop.addressBook[0].address1 + " " + shop.addressBook[0].address2,
+      city: shop.addressBook[0].city,
+      region: shop.addressBook[0].region,
+      postal: shop.addressBook[0].postal
+    },
+    shopName: shop.name,
+    socialLinks: {
+      display: true,
+      facebook: {
+        display: true,
+        icon: Meteor.absoluteUrl() + "resources/email-templates/facebook-icon.png",
+        link: "https://www.facebook.com"
+      },
+      googlePlus: {
+        display: true,
+        icon: Meteor.absoluteUrl() + "resources/email-templates/google-plus-icon.png",
+        link: "https://plus.google.com"
+      },
+      twitter: {
+        display: true,
+        icon: Meteor.absoluteUrl() + "resources/email-templates/twitter-icon.png",
+        link: "https://www.twitter.com"
+      }
+    },
+    user: Meteor.user(), // Account Data
+    currentUserName,
+    invitedUserName: name,
+    url: MeteorAccounts.urls.enrollAccount(token)
+  };
+
+  Meteor.users.update(userId, {
+    $set: {
+      "services.password.reset": { token, email, when: new Date() },
+      "name": name
+    }
+  });
+
+  Reaction.Email.send({
+    to: email,
+    from: `${shop.name} <${shop.emails[0].address}>`,
+    subject: SSR.render(subject, dataForEmail),
+    html: SSR.render(tpl, dataForEmail)
+  });
+}
+
+/**
    * inviteShopMember
-   * invite new admin users (not consumers) to secure access in the dashboard
-   * @param {Object} shopDetails - Object with either a shopId key containing shopId OR key newShop set to True. If newShop is true, it takes precedence over the shopId paseed
+   * invite new admin users
+   * (not consumers) to secure access in the dashboard
+   * to permissions as specified in packages/roles
+   * @param {String} shopId - shop to invite user
    * @param {String} email - email of invitee
    * @param {String} name - name to address email
    * @returns {Boolean} returns true
    */
-export function inviteShopMember(shopDetails, email, name) {
-  console.log({ name, shopDetails });
-  check(shopDetails, Object);
-  check(shopDetails.newShop, Boolean);
-  check(shopDetails.shopId, String);
+export function inviteShopMember(shopId, email, name) {
+  check(shopId, String);
   check(email, String);
   check(name, String);
 
   this.unblock();
-  const { shopId } = shopDetails;
-  let shop;
 
-  // if new shop is checked
-  if (shopDetails.newShop) {
-    shop = createNewShop();
-  } else {
-    shop = Shops.findOne(shopId);
-  }
-
+  const shop = Shops.findOne(shopId);
 
   if (!shop) {
     const msg = `accounts/inviteShopMember - Shop ${shopId} not found`;
@@ -575,7 +661,7 @@ export function inviteShopMember(shopDetails, email, name) {
     }
   });
 
-  const newUser = Meteor.users.findOne(userId);
+  const newUser = Meteor.users.findOne(userId); // Question: Why do we do this? Is there a reason to check in Meteor.users
 
   if (!newUser) {
     throw new Error("Can't find user");
