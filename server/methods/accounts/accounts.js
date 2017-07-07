@@ -454,22 +454,31 @@ export function addressBookRemove(addressId, accountUserId) {
 
 /**
    * inviteShopMember
-   * invite new admin users
-   * (not consumers) to secure access in the dashboard
-   * to permissions as specified in packages/roles
-   * @param {String} shopId - shop to invite user
+   * invite new admin users (not consumers) to secure access in the dashboard
+   * @param {Object} shopDetails - Object with either a shopId key containing shopId OR key newShop set to True. If newShop is true, it takes precedence over the shopId paseed
    * @param {String} email - email of invitee
    * @param {String} name - name to address email
    * @returns {Boolean} returns true
    */
-export function inviteShopMember(shopId, email, name) {
-  check(shopId, String);
+export function inviteShopMember(shopDetails, email, name) {
+  console.log({ name, shopDetails });
+  check(shopDetails, Object);
+  check(shopDetails.newShop, Boolean);
+  check(shopDetails.shopId, String);
   check(email, String);
   check(name, String);
 
   this.unblock();
+  const { shopId } = shopDetails;
+  let shop;
 
-  const shop = Shops.findOne(shopId);
+  // if new shop is checked
+  if (shopDetails.newShop) {
+    shop = createNewShop();
+  } else {
+    shop = Shops.findOne(shopId);
+  }
+
 
   if (!shop) {
     const msg = `accounts/inviteShopMember - Shop ${shopId} not found`;
@@ -480,6 +489,12 @@ export function inviteShopMember(shopId, email, name) {
   if (!Reaction.hasPermission("reaction-accounts", this.userId, shopId)) {
     Logger.error(`User ${this.userId} does not have reaction-accounts permissions`);
     throw new Meteor.Error("access-denied", "Access denied");
+  }
+
+  const user = Meteor.users.findOne({ "emails.address": email });
+
+  if (user) {
+    throw new Meteor.Error("409", "A user with this email address already exists");
   }
 
   const currentUser = Meteor.users.findOne(this.userId);
@@ -515,8 +530,7 @@ export function inviteShopMember(shopId, email, name) {
   const token = Random.id();
 
   const dataForEmail = {
-    // Shop Data
-    shop: shop,
+    shop: shop, // Shop Data
     contactEmail: shop.emails[0].address,
     homepage: Meteor.absoluteUrl(),
     emailLogo: emailLogo,
@@ -547,48 +561,40 @@ export function inviteShopMember(shopId, email, name) {
         link: "https://www.twitter.com"
       }
     },
-    // Account Data
-    user: Meteor.user(),
+    user: Meteor.user(), // Account Data
     currentUserName,
     invitedUserName: name,
     url: MeteorAccounts.urls.enrollAccount(token)
   };
 
-  const user = Meteor.users.findOne({
-    "emails.address": email
+  const userId = MeteorAccounts.createUser({
+    email: email,
+    name: name,
+    profile: {
+      invited: true
+    }
   });
 
-  if (!user) {
-    const userId = MeteorAccounts.createUser({
-      email: email,
-      name: name,
-      profile: {
-        invited: true
-      }
-    });
+  const newUser = Meteor.users.findOne(userId);
 
-    const newUser = Meteor.users.findOne(userId);
-
-    if (!newUser) {
-      throw new Error("Can't find user");
-    }
-
-    Meteor.users.update(userId, {
-      $set: {
-        "services.password.reset": { token, email, when: new Date() },
-        "name": name
-      }
-    });
-
-    Reaction.Email.send({
-      to: email,
-      from: `${shop.name} <${shop.emails[0].address}>`,
-      subject: SSR.render(subject, dataForEmail),
-      html: SSR.render(tpl, dataForEmail)
-    });
-  } else {
-    throw new Meteor.Error("409", "A user with this email address already exists");
+  if (!newUser) {
+    throw new Error("Can't find user");
   }
+
+  Meteor.users.update(userId, {
+    $set: {
+      "services.password.reset": { token, email, when: new Date() },
+      "name": name
+    }
+  });
+
+  Reaction.Email.send({
+    to: email,
+    from: `${shop.name} <${shop.emails[0].address}>`,
+    subject: SSR.render(subject, dataForEmail),
+    html: SSR.render(tpl, dataForEmail)
+  });
+
   return true;
 }
 

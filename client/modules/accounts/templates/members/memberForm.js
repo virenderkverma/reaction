@@ -13,8 +13,9 @@ Template.memberForm.events({
 
     const newMemberEmail = template.$('input[name="email"]').val();
     const newMemberName = template.$('input[name="name"]').val();
-
-    return Meteor.call("accounts/inviteShopMember", Reaction.getShopId(),
+    const newShop = template.$('input[name="shop"]').is(":checked");
+    console.log({ newMemberEmail, newShop });
+    return Meteor.call("accounts/inviteShopMember", { newShop, shopId: Reaction.getShopId() },
       newMemberEmail, newMemberName, function (error, result) {
         if (error) {
           let message;
