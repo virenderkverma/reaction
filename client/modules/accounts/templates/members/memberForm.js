@@ -14,40 +14,41 @@ Template.memberForm.events({
     const newMemberEmail = template.$('input[name="email"]').val();
     const newMemberName = template.$('input[name="name"]').val();
     const newShop = template.$('input[name="shop"]').is(":checked");
-    console.log({ newMemberEmail, newShop });
-    return Meteor.call("accounts/inviteShopMember", { newShop, shopId: Reaction.getShopId() },
-      newMemberEmail, newMemberName, function (error, result) {
-        if (error) {
-          let message;
-          if (error.reason === "Unable to send invitation email.") {
-            message = i18next.t("accountsUI.error.unableToSendInvitationEmail");
-          } else if (error.reason === "A user with this email address already exists") {
-            message = i18next.t("accountsUI.error.userWithEmailAlreadyExists");
-          } else if (error.reason !== "") {
-            message = error;
-          } else {
-            message = `${i18next.t("accountsUI.error.errorSendingEmail")
-              } ${error}`;
-          }
 
-          Alerts.inline(message, "error", {
-            placement: "memberform"
-          });
+    if (newShop) {
+      return Meteor.call("accounts/inviteAsOwner", { name: newMemberName, email: newMemberEmail }, cb);
+    }
 
-          template.$("input[type=text], input[type=email]").val("");
+    return Meteor.call("accounts/inviteShopMember", Reaction.getShopId(), newMemberEmail, newMemberName, cb);
 
-          return false;
+    function cb(error, result) {
+      if (error) {
+        let message;
+        if (error.reason === "Unable to send invitation email.") {
+          message = i18next.t("accountsUI.error.unableToSendInvitationEmail");
+        } else if (error.reason === "A user with this email address already exists") {
+          message = i18next.t("accountsUI.error.userWithEmailAlreadyExists");
+        } else if (error.reason !== "") {
+          message = error;
+        } else {
+          message = `${i18next.t("accountsUI.error.errorSendingEmail")} ${error}`;
         }
-        if (result) {
-          Alerts.toast(i18next.t("accountsUI.info.invitationSent",
-            "Invitation sent."), "success");
 
-          template.$("input[type=text], input[type=email]").val("");
-          $(".settings-account-list").show();
+        Alerts.inline(message, "error", { placement: "memberform" });
 
-          return true;
-        }
+        template.$("input[type=text], input[type=email]").val("");
+
+        return false;
       }
-    );
+      if (result) {
+        Alerts.toast(i18next.t("accountsUI.info.invitationSent",
+          "Invitation sent."), "success");
+
+        template.$("input[type=text], input[type=email]").val("");
+        $(".settings-account-list").show();
+
+        return true;
+      }
+    }
   }
 });

@@ -461,7 +461,8 @@ export function addressBookRemove(addressId, accountUserId) {
  * @param {String} options.name - name of invitee
  * @returns {Boolean} returns true
  */
-function inviteAsOwner(options) {
+export function inviteAsOwner(options) { // why do we export all functions? and still put on Meteor.methods
+  check(options, Object);
   check(options.email, String);
   check(options.name, String);
   const { name, email } = options;
@@ -472,7 +473,6 @@ function inviteAsOwner(options) {
     profile: { invited: true }
   });
 
-  // const newUser = Meteor.users.findOne(userId);
   const { shopId } = Meteor.call("shop/createShop", userId);
   const shop = Shops.findOne(shopId);
 
@@ -493,19 +493,32 @@ function inviteAsOwner(options) {
   }
 
   const token = Random.id();
+  const currentUser = Meteor.users.findOne(this.userId);
+
+  let currentUserName;
+
+  if (currentUser) {
+    if (currentUser.profile) {
+      currentUserName = currentUser.profile.name || currentUser.username;
+    } else {
+      currentUserName = currentUser.username;
+    }
+  } else {
+    currentUserName = "Admin";
+  }
 
   const dataForEmail = {
     shop: shop, // Shop Data
-    contactEmail: shop.emails[0].address,
+    contactEmail: _.get(shop, "emails[0].address"),
     homepage: Meteor.absoluteUrl(),
     emailLogo: emailLogo,
     copyrightDate: moment().format("YYYY"),
-    legalName: shop.addressBook[0].company,
+    legalName: _.get(shop, "addressBook[0].company"),
     physicalAddress: {
-      address: shop.addressBook[0].address1 + " " + shop.addressBook[0].address2,
-      city: shop.addressBook[0].city,
-      region: shop.addressBook[0].region,
-      postal: shop.addressBook[0].postal
+      address: `${_.get(shop, "addressBook[0].address1")} ${_.get(shop, "addressBook[0].address2")}`,
+      city: _.get(shop, "addressBook[0].city"),
+      region: _.get(shop, "addressBook[0].region"),
+      postal: _.get(shop, "addressBook[0].postal")
     },
     shopName: shop.name,
     socialLinks: {
@@ -541,10 +554,12 @@ function inviteAsOwner(options) {
 
   Reaction.Email.send({
     to: email,
-    from: `${shop.name} <${shop.emails[0].address}>`,
+    from: `${shop.name} <${_.get(shop, "emails[0].address")}>`,
     subject: SSR.render(subject, dataForEmail),
     html: SSR.render(tpl, dataForEmail)
   });
+
+  return true;
 }
 
 /**
@@ -861,6 +876,7 @@ Meteor.methods({
   "accounts/addressBookUpdate": addressBookUpdate,
   "accounts/addressBookRemove": addressBookRemove,
   "accounts/inviteShopMember": inviteShopMember,
+  "accounts/inviteAsOwner": inviteAsOwner,
   "accounts/sendWelcomeEmail": sendWelcomeEmail,
   "accounts/addUserPermissions": addUserPermissions,
   "accounts/removeUserPermissions": removeUserPermissions,
