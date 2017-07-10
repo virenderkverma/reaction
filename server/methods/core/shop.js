@@ -54,9 +54,6 @@ Meteor.methods({
 
     // admin or marketplace needs to be on and guests allowed to create shops
     if (currentUser && Reaction.hasMarketplaceAccess("guest")) {
-      const group = Collections.Groups.findOne({ slug: "merchant", shopId: Reaction.getShopId() });
-      adminRoles = group && group.permissions;
-
       // add user info for new shop
       shop.emails = currentUser.emails;
       // TODO: Review source of default address for shop from user
@@ -77,16 +74,19 @@ Meteor.methods({
       return Logger.error(error, "Failed to shop/createShop");
     }
 
+    // create default groups for new the shop
+    Reaction.createDefaultGroups();
+    const group = Collections.Groups.findOne({ slug: "merchant", shopId: shop._id });
+    adminRoles = group && group.permissions;
+
     // we should have created new shop, or errored
     Logger.info("Created shop: ", shop._id);
 
     // update user
     Reaction.insertPackagesForShop(shop._id);
     Roles.addUsersToRoles([currentUser, userId], adminRoles, shop._id);
-    Collections.Accounts.update({ _id: currentUser._id }, {
-      $set: {
-        shopId: shop._id
-      }
+    Collections.Accounts.update({ _id: userId }, {
+      $set: { shopId: shop._id, groups: [group._id] }
     });
 
     // Set active shop to new shop.

@@ -466,6 +466,12 @@ export function inviteShopOwner(options) {
   check(options.name, String);
   const { name, email } = options;
 
+  const user = Meteor.users.findOne({ "emails.address": email });
+
+  if (user) {
+    throw new Meteor.Error("409", "A user with this email address already exists");
+  }
+
   const userId = MeteorAccounts.createUser({
     email: email,
     name: name,
