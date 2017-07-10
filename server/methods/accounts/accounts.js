@@ -453,9 +453,8 @@ export function addressBookRemove(addressId, accountUserId) {
 }
 
 /**
- * inviteAsOwner
- * invite new user as owner of a new shop
- * If newShop is true, it takes precedence over the shopId passed
+ * inviteShopOwner
+ * invite a new user as owner of a new shop
  * @param {Object} options -
  * @param {String} options.email - email of invitee
  * @param {String} options.name - name of invitee
@@ -473,30 +472,21 @@ export function inviteShopOwner(options) {
     profile: { invited: true }
   });
 
-  const { shopId } = Meteor.call("shop/createShop", userId);
+  const { shopId } = Meteor.call("shop/createShop", userId) || {};
   const shop = Shops.findOne(shopId);
 
   // Compile Email with SSR
   const tpl = "accounts/inviteShopOwner";
   const subject = "accounts/inviteShopOwner/subject";
-  console.log({ subject });
+
   SSR.compileTemplate(tpl, Reaction.Email.getTemplate(tpl));
   SSR.compileTemplate(subject, Reaction.Email.getSubject(tpl));
 
-  // Get shop logo, if available. If not, use default logo from file-system
-  let emailLogo;
-  if (Array.isArray(shop.brandAssets)) {
-    const brandAsset = _.find(shop.brandAssets, (asset) => asset.type === "navbarBrandImage");
-    const mediaId = Media.findOne(brandAsset.mediaId);
-    emailLogo = path.join(Meteor.absoluteUrl(), mediaId.url());
-  } else {
-    emailLogo = Meteor.absoluteUrl() + "resources/email-templates/shop-logo.png";
-  }
-
+  const emailLogo = getEmailLogo(shop);
   const token = Random.id();
   const currentUser = Meteor.users.findOne(this.userId);
   const currentUserName = getCurrentUserName(currentUser);
-  const dataForEmail = getDataForEmail({ shop, currentUserName, token, emailLogo });
+  const dataForEmail = getDataForEmail({ shop, currentUserName, name, token, emailLogo });
 
   Meteor.users.update(userId, {
     $set: {
@@ -560,18 +550,9 @@ export function inviteShopMember(shopId, email, name) {
   SSR.compileTemplate(tpl, Reaction.Email.getTemplate(tpl));
   SSR.compileTemplate(subject, Reaction.Email.getSubject(tpl));
 
-  // Get shop logo, if available. If not, use default logo from file-system
-  let emailLogo;
-  if (Array.isArray(shop.brandAssets)) {
-    const brandAsset = _.find(shop.brandAssets, (asset) => asset.type === "navbarBrandImage");
-    const mediaId = Media.findOne(brandAsset.mediaId);
-    emailLogo = path.join(Meteor.absoluteUrl(), mediaId.url());
-  } else {
-    emailLogo = Meteor.absoluteUrl() + "resources/email-templates/shop-logo.png";
-  }
-
+  const emailLogo = getEmailLogo(shop);
   const token = Random.id();
-  const dataForEmail = getDataForEmail({ shop, currentUserName, token, emailLogo });
+  const dataForEmail = getDataForEmail({ shop, name, currentUserName, token, emailLogo });
   const userId = MeteorAccounts.createUser({
     email: email,
     name: name,
@@ -769,6 +750,19 @@ export function setUserPermissions(userId, permissions, group) {
   }
 }
 
+// Get shop logo, if available. If not, use default logo from file-system
+function getEmailLogo(shop) {
+  let emailLogo;
+  if (Array.isArray(shop.brandAssets)) {
+    const brandAsset = _.find(shop.brandAssets, (asset) => asset.type === "navbarBrandImage");
+    const mediaId = Media.findOne(brandAsset.mediaId);
+    emailLogo = path.join(Meteor.absoluteUrl(), mediaId.url());
+  } else {
+    emailLogo = Meteor.absoluteUrl() + "resources/email-templates/shop-logo.png";
+  }
+  return emailLogo;
+}
+
 function getCurrentUserName(currentUser) {
   let currentUserName;
   if (currentUser) {
@@ -784,7 +778,7 @@ function getCurrentUserName(currentUser) {
 }
 
 function getDataForEmail(options) {
-  const { shop, currentUserName, token, emailLogo } = options;
+  const { shop, currentUserName, token, emailLogo, name } = options;
   return {
     shop: shop, // Shop Data
     contactEmail: _.get(shop, "emails[0].address"),

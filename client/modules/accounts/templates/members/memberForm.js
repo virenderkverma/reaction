@@ -16,7 +16,7 @@ Template.memberForm.events({
     const newShop = template.$('input[name="shop"]').is(":checked");
 
     if (newShop) {
-      return Meteor.call("accounts/inviteAsOwner", { name: newMemberName, email: newMemberEmail }, cb);
+      return Meteor.call("accounts/inviteShopOwner", { name: newMemberName, email: newMemberEmail }, cb);
     }
 
     return Meteor.call("accounts/inviteShopMember", Reaction.getShopId(), newMemberEmail, newMemberName, cb);
