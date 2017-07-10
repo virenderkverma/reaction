@@ -466,8 +466,10 @@ export function inviteShopOwner(options) {
   check(options.name, String);
   const { name, email } = options;
 
+  if (!Reaction.hasPermission("admin")) {
+    throw new Meteor.Error("access-denied", "Access denied");
+  }
   const user = Meteor.users.findOne({ "emails.address": email });
-
   if (user) {
     throw new Meteor.Error("409", "A user with this email address already exists");
   }
@@ -567,7 +569,7 @@ export function inviteShopMember(shopId, email, name) {
     }
   });
 
-  const newUser = Meteor.users.findOne(userId); // Question: Why do we do this? Is there a reason to check in Meteor.users
+  const newUser = Meteor.users.findOne(userId);
 
   if (!newUser) {
     throw new Error("Can't find user");

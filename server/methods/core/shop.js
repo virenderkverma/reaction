@@ -86,7 +86,7 @@ Meteor.methods({
     Reaction.insertPackagesForShop(shop._id);
     Roles.addUsersToRoles([currentUser, userId], adminRoles, shop._id);
     Collections.Accounts.update({ _id: userId }, {
-      $set: { shopId: shop._id, groups: [group._id] }
+      $set: { shopId: shop._id }, $addToSet: { groups: group._id }
     });
 
     // Set active shop to new shop.
