@@ -62,6 +62,8 @@ export default {
     const roles = {
       customer: [ "guest", "account/profile", "product", "tag", "index", "cart/checkout", "cart/completed"],
       guest: ["anonymous", "guest", "product", "tag", "index", "cart/checkout", "cart/completed"],
+      merchant: ["owner", "admin", "seller", "guest", "manage-users", "orders", "account/profile", "product",
+        "createProduct", "tag", "index", "cart/checkout", "cart/completed"],
       owner: Roles.getAllRoles().fetch().map(role => role.name)
     };
 
@@ -344,7 +346,7 @@ export default {
     }
   },
 
-  /**
+  /** // TODO: Check to see if this is still being used
    * Add default roles for new sellers
    * @param {String|Array} roles A string or array of roles and routes
    * @returns {undefined} - does not specifically return anything

@@ -31,7 +31,6 @@ Meteor.methods({
     const currentUser = Meteor.user();
 
     if (!currentUser) {
-      // Question: this error is being thrown because logged in user is null. Does this error depict that?
       throw new Meteor.Error("Unable to create shop with specified user");
     }
 
@@ -55,7 +54,8 @@ Meteor.methods({
 
     // admin or marketplace needs to be on and guests allowed to create shops
     if (currentUser && Reaction.hasMarketplaceAccess("guest")) {
-      adminRoles = shop.defaultSellerRoles; // defaultSellerRoles???
+      const group = Collections.Groups.findOne({ slug: "merchant", shopId: Reaction.getShopId() });
+      adminRoles = group && group.permissions;
 
       // add user info for new shop
       shop.emails = currentUser.emails;

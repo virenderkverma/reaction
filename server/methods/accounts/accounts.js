@@ -461,7 +461,7 @@ export function addressBookRemove(addressId, accountUserId) {
  * @param {String} options.name - name of invitee
  * @returns {Boolean} returns true
  */
-export function inviteAsOwner(options) { // why do we export all functions? and still put on Meteor.methods
+export function inviteShopOwner(options) {
   check(options, Object);
   check(options.email, String);
   check(options.name, String);
@@ -477,8 +477,9 @@ export function inviteAsOwner(options) { // why do we export all functions? and 
   const shop = Shops.findOne(shopId);
 
   // Compile Email with SSR
-  const tpl = "accounts/inviteShopMember";
-  const subject = "accounts/inviteShopMember/subject";
+  const tpl = "accounts/inviteShopOwner";
+  const subject = "accounts/inviteShopOwner/subject";
+  console.log({ subject });
   SSR.compileTemplate(tpl, Reaction.Email.getTemplate(tpl));
   SSR.compileTemplate(subject, Reaction.Email.getSubject(tpl));
 
@@ -494,56 +495,8 @@ export function inviteAsOwner(options) { // why do we export all functions? and 
 
   const token = Random.id();
   const currentUser = Meteor.users.findOne(this.userId);
-
-  let currentUserName;
-
-  if (currentUser) {
-    if (currentUser.profile) {
-      currentUserName = currentUser.profile.name || currentUser.username;
-    } else {
-      currentUserName = currentUser.username;
-    }
-  } else {
-    currentUserName = "Admin";
-  }
-
-  const dataForEmail = {
-    shop: shop, // Shop Data
-    contactEmail: _.get(shop, "emails[0].address"),
-    homepage: Meteor.absoluteUrl(),
-    emailLogo: emailLogo,
-    copyrightDate: moment().format("YYYY"),
-    legalName: _.get(shop, "addressBook[0].company"),
-    physicalAddress: {
-      address: `${_.get(shop, "addressBook[0].address1")} ${_.get(shop, "addressBook[0].address2")}`,
-      city: _.get(shop, "addressBook[0].city"),
-      region: _.get(shop, "addressBook[0].region"),
-      postal: _.get(shop, "addressBook[0].postal")
-    },
-    shopName: shop.name,
-    socialLinks: {
-      display: true,
-      facebook: {
-        display: true,
-        icon: Meteor.absoluteUrl() + "resources/email-templates/facebook-icon.png",
-        link: "https://www.facebook.com"
-      },
-      googlePlus: {
-        display: true,
-        icon: Meteor.absoluteUrl() + "resources/email-templates/google-plus-icon.png",
-        link: "https://plus.google.com"
-      },
-      twitter: {
-        display: true,
-        icon: Meteor.absoluteUrl() + "resources/email-templates/twitter-icon.png",
-        link: "https://www.twitter.com"
-      }
-    },
-    user: Meteor.user(), // Account Data
-    currentUserName,
-    invitedUserName: name,
-    url: MeteorAccounts.urls.enrollAccount(token)
-  };
+  const currentUserName = getCurrentUserName(currentUser);
+  const dataForEmail = getDataForEmail({ shop, currentUserName, token, emailLogo });
 
   Meteor.users.update(userId, {
     $set: {
@@ -599,18 +552,7 @@ export function inviteShopMember(shopId, email, name) {
   }
 
   const currentUser = Meteor.users.findOne(this.userId);
-
-  let currentUserName;
-
-  if (currentUser) {
-    if (currentUser.profile) {
-      currentUserName = currentUser.profile.name || currentUser.username;
-    } else {
-      currentUserName = currentUser.username;
-    }
-  } else {
-    currentUserName = "Admin";
-  }
+  const currentUserName = getCurrentUserName(currentUser);
 
   // Compile Email with SSR
   const tpl = "accounts/inviteShopMember";
@@ -629,45 +571,7 @@ export function inviteShopMember(shopId, email, name) {
   }
 
   const token = Random.id();
-
-  const dataForEmail = {
-    shop: shop, // Shop Data
-    contactEmail: shop.emails[0].address,
-    homepage: Meteor.absoluteUrl(),
-    emailLogo: emailLogo,
-    copyrightDate: moment().format("YYYY"),
-    legalName: shop.addressBook[0].company,
-    physicalAddress: {
-      address: shop.addressBook[0].address1 + " " + shop.addressBook[0].address2,
-      city: shop.addressBook[0].city,
-      region: shop.addressBook[0].region,
-      postal: shop.addressBook[0].postal
-    },
-    shopName: shop.name,
-    socialLinks: {
-      display: true,
-      facebook: {
-        display: true,
-        icon: Meteor.absoluteUrl() + "resources/email-templates/facebook-icon.png",
-        link: "https://www.facebook.com"
-      },
-      googlePlus: {
-        display: true,
-        icon: Meteor.absoluteUrl() + "resources/email-templates/google-plus-icon.png",
-        link: "https://plus.google.com"
-      },
-      twitter: {
-        display: true,
-        icon: Meteor.absoluteUrl() + "resources/email-templates/twitter-icon.png",
-        link: "https://www.twitter.com"
-      }
-    },
-    user: Meteor.user(), // Account Data
-    currentUserName,
-    invitedUserName: name,
-    url: MeteorAccounts.urls.enrollAccount(token)
-  };
-
+  const dataForEmail = getDataForEmail({ shop, currentUserName, token, emailLogo });
   const userId = MeteorAccounts.createUser({
     email: email,
     name: name,
@@ -865,6 +769,61 @@ export function setUserPermissions(userId, permissions, group) {
   }
 }
 
+function getCurrentUserName(currentUser) {
+  let currentUserName;
+  if (currentUser) {
+    if (currentUser.profile) {
+      currentUserName = currentUser.profile.name || currentUser.username;
+    } else {
+      currentUserName = currentUser.username;
+    }
+  } else {
+    currentUserName = "Admin";
+  }
+  return currentUserName;
+}
+
+function getDataForEmail(options) {
+  const { shop, currentUserName, token, emailLogo } = options;
+  return {
+    shop: shop, // Shop Data
+    contactEmail: _.get(shop, "emails[0].address"),
+    homepage: Meteor.absoluteUrl(),
+    emailLogo: emailLogo,
+    copyrightDate: moment().format("YYYY"),
+    legalName: _.get(shop, "addressBook[0].company"),
+    physicalAddress: {
+      address: `${_.get(shop, "addressBook[0].address1")} ${_.get(shop, "addressBook[0].address2")}`,
+      city: _.get(shop, "addressBook[0].city"),
+      region: _.get(shop, "addressBook[0].region"),
+      postal: _.get(shop, "addressBook[0].postal")
+    },
+    shopName: shop.name,
+    socialLinks: {
+      display: true,
+      facebook: {
+        display: true,
+        icon: Meteor.absoluteUrl() + "resources/email-templates/facebook-icon.png",
+        link: "https://www.facebook.com"
+      },
+      googlePlus: {
+        display: true,
+        icon: Meteor.absoluteUrl() + "resources/email-templates/google-plus-icon.png",
+        link: "https://plus.google.com"
+      },
+      twitter: {
+        display: true,
+        icon: Meteor.absoluteUrl() + "resources/email-templates/twitter-icon.png",
+        link: "https://www.twitter.com"
+      }
+    },
+    user: Meteor.user(), // Account Data
+    currentUserName,
+    invitedUserName: name,
+    url: MeteorAccounts.urls.enrollAccount(token)
+  };
+}
+
 /**
  * Reaction Account Methods
  */
@@ -876,7 +835,7 @@ Meteor.methods({
   "accounts/addressBookUpdate": addressBookUpdate,
   "accounts/addressBookRemove": addressBookRemove,
   "accounts/inviteShopMember": inviteShopMember,
-  "accounts/inviteAsOwner": inviteAsOwner,
+  "accounts/inviteShopOwner": inviteShopOwner,
   "accounts/sendWelcomeEmail": sendWelcomeEmail,
   "accounts/addUserPermissions": addUserPermissions,
   "accounts/removeUserPermissions": removeUserPermissions,
