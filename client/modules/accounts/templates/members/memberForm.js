@@ -1,6 +1,7 @@
 import { Reaction, i18next } from "/client/api";
 import { Meteor } from "meteor/meteor";
 import { Template } from "meteor/templating";
+import { $ } from "meteor/jquery";
 
 
 /**
@@ -35,15 +36,12 @@ Template.memberForm.events({
         }
 
         Alerts.inline(message, "error", { placement: "memberform" });
-
         template.$("input[type=text], input[type=email]").val("");
-
         return false;
       }
-      if (result) {
-        Alerts.toast(i18next.t("accountsUI.info.invitationSent",
-          "Invitation sent."), "success");
 
+      if (result) {
+        Alerts.toast(i18next.t("accountsUI.info.invitationSent", "Invitation sent."), "success");
         template.$("input[type=text], input[type=email]").val("");
         $(".settings-account-list").show();
 
