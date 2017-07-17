@@ -3,7 +3,7 @@ import { Meteor } from "meteor/meteor";
 import { Reaction } from "/lib/api";
 import { Shops } from "/lib/collections";
 
-
+// Can pass shopIds or shopSlugs
 Meteor.publish("SellerShops", function (shopIds) {
   check(shopIds, Match.Optional([String]));
 
@@ -17,6 +17,11 @@ Meteor.publish("SellerShops", function (shopIds) {
       if (sellerShopId) {
         const pubShopIds =  _.without(shopIds, sellerShopId);
         selector._id = { $in: pubShopIds };
+        selector.$or = [{
+          slug: {
+            $in: shopIds
+          }
+        }];
       }
     } else {
       if (sellerShopId) {

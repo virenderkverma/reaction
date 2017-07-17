@@ -3155,6 +3155,7 @@
     }
   },
   "name": "REACTION",
+  "slug": "reaction",
   "taxes": [{
     "taxesIncluded": null,
     "taxShipping": null,
@@ -6361,6 +6362,7 @@
     }
   },
   "name": "<blank site>",
+  "slug": "blank-site",
   "taxes": [{
     "taxesIncluded": null,
     "taxShipping": null,

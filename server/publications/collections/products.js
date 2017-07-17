@@ -133,6 +133,15 @@ Meteor.publish("Products", function (productScrollLimit = 24, productFilters, so
             $in: productFilters.shops
           }
         });
+
+        // or by slug
+        _.extend(selector, {
+          $or: [{
+            shopSlug: {
+              $in: productFilters.shops
+            }
+          }]
+        });
       } else if (productFilters.marketplace) {
         delete selector.shopId;
       }
