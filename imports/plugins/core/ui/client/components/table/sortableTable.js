@@ -27,7 +27,7 @@ class SortableTable extends Component {
    * @prop {String} matchingResultsCount - Send to Counts collection to get results count of sub
    * @prop {String} publication - publication to subscribe to
    * @prop {Object} collection - collection to get data from
-   * Use props to get collection, EmailTableColumn
+   * Use props to get collection
    * Use that info to call meteor and get subscription
    * Output data for table
    * @returns {Object} loading status (bool), results (object), and matchingResults (number)
@@ -40,8 +40,11 @@ class SortableTable extends Component {
     const matchingResults = Counts.get(matchingResultsCount);
 
     const options = {};
+    let skip;
 
-    const pubHandle = Meteor.subscribe(publication, this.state.query, _.assignIn({}, options));
+    const pubHandle = Meteor.subscribe(publication, this.state.query, _.extend({
+      skip: skip
+    }, options));
 
     // optional transform of collection for grid results
     let results = collection.find(this.state.query, options).fetch();
@@ -123,7 +126,7 @@ class SortableTable extends Component {
 
     // Add minWidth = undefined to override 100px default set by ReactTable
     const displayColumns = columnMetadata.map((element) => {
-      return _.assignIn({}, element, {
+      return _.extend({}, element, {
         minWidth: undefined
       });
     });
@@ -147,7 +150,6 @@ class SortableTable extends Component {
     }
 
     const filteredData = matchSorter(originalData, filterInput, { keys: filteredFields });
-
     return filteredData;
   }
 
@@ -190,20 +192,19 @@ class SortableTable extends Component {
 
   render() {
     const { ...otherProps } = this.props;
-
+    const defaultClassName = "-striped -highlight";
     // All available props: https://github.com/tannerlinsley/react-table#props
     return (
       <div>
         {this.renderTableFilter()}
         <ReactTable
-          className={"-striped -highlight"}
+          className={otherProps.tableClassName || defaultClassName}
           columns={this.renderColumns()}
-          data={this.renderData()}
+          data={otherProps.data || this.renderData()}
           defaultFilterMethod={this.customFilter}
           defaultPageSize={otherProps.defaultPageSize}
           filterable={this.renderColumnFilter()}
           minRows={otherProps.minRows}
-
           previousText={otherProps.previousText}
           nextText={otherProps.nextText}
           loadingText={otherProps.loadingText}
@@ -211,9 +212,7 @@ class SortableTable extends Component {
           pageText={otherProps.pageText}
           ofText={otherProps.ofText}
           rowsText={otherProps.rowsText}
-
           PaginationComponent={SortableTablePagination}
-
           getTrProps={(state, rowInfo, column, instance) => { // eslint-disable-line no-unused-vars
             return {
               onClick: e => { // eslint-disable-line no-unused-vars
@@ -267,7 +266,6 @@ SortableTable.defaultProps = {
   isResizeable: true,
   isSortable: true,
   minRows: 0,
-  // Text props where translations are needed
   noDataMessage: "No results found",
   previousText: "Previous",
   nextText: "Next",
