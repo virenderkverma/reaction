@@ -28,6 +28,7 @@ Since anything in our codebase can be extended, overwritten, or installed as a p
 ```bash
 npm install -g reaction-cli
 reaction init
+md reaction
 cd reaction
 reaction
 ```
